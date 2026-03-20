@@ -16,95 +16,224 @@ You will need to install PLINK and run the analyses. Please follow the OS-specif
 #### Question 1: Data inspection
 
 Before fitting any models, it is essential to understand the data. Use R or bash code to answer the following questions about the `gwa.qc.A1.fam`, `gwa.qc.A1.bim`, and `gwa.qc.A1.bed` files, available at the following Google Drive link: <https://drive.google.com/drive/folders/11meVqGCY5yAyI1fh-fAlMEXQt0VmRGuz?usp=drive_link>. Please download all three files from this link and place them in `02_activities/data/`.
+```{r setup, include=FALSE}
+# Set up a consistent path for all chunks of code
+knitr::opts_knit$set(root.dir = normalizePath("../../"))
+```
 
-(i) Read the .fam file. How many samples does the dataset contain?
+```{r, message=FALSE, warning=FALSE, results='hide'}
+library(data.table)
+library(ggplot2)
+library(seqminer)
+library(HardyWeinberg)
+library(dplyr)
+```
 
-```         
-# Your answer here...
+(i) Read the .fam file. How many samples does the dataset contain? 
+4000 rows
+
+``` {bash}        
+wc -l ./02_activities/data/gwa.qc.A1.fam
 ```
 
 (ii) What is the 'variable type' of the response variable (i.e.Continuous or binary)?
-
-```         
-# Your answer here...
+continuous
+``` {bash}
+head ./02_activities/data/gwa.qc.A1.fam
 ```
 
 (iii) Read the .bim file. How many SNPs does the dataset contain?
-
-```         
+101083
+``` {bash}        
 # Your answer here...
+wc -l ./02_activities/data/gwa.qc.A1.bim
+head ./02_activities/data/gwa.qc.A1.bim
 ```
 
 #### Question 2: Allele Frequency Estimation
 
 (i) Load the genotype matrix for SNPs rs1861, rs3813199, rs3128342, and rs11804831 using additive coding. What are the allele frequencies (AFs) for these four SNPs?
 
-```         
-# Your code here...
+```{bash,message=FALSE, warning=FALSE}
+# Create SNP list file with 4 example SNPs
+# setopt interactivecomments
+printf "%s\n" rs1861 rs3813199 rs3128342 rs11804831 > ./02_activities/data/A1_snplist.txt
 ```
+
+``` {bash, results='hide',message=FALSE, warning=FALSE}
+plink2 --bfile ./02_activities/data/gwa.qc.A1 \
+      --extract ./02_activities/data/A1_snplist.txt \
+      --freq \
+      --out ./02_activities/data/geno.A1.additive
+  
+```
+
 
 (ii) What are the minor allele frequencies (MAFs) for these four SNPs?
 
-```         
-# Your code here...
+``` {bash}
+cut -f6 ./02_activities/data/geno.A1.additive.afreq
 ```
 
 #### Question 3: Hardy–Weinberg Equilibrium (HWE) Test
 
 (i) Conduct the Hardy–Weinberg Equilibrium (HWE) test for all SNPs in the .bim file. Then, load the file containing the HWE p-value results and display the first few rows of the resulting data frame.
 
-```         
-# Your code here...
+``` {bash,results='hide',message=FALSE, warning=FALSE}
+plink2 --bfile ./02_activities/data/gwa.qc.A1 --hardy --out ./02_activities/data/gwa_qc_A1_hwe
+
+head ./02_activities/data/gwa_qc_A1_hwe.hardy
 ```
 
 (ii) What are the HWE p-values for SNPs rs1861, rs3813199, rs3128342, and rs11804831?
 
-```         
-# Your code here...
+``` {bash}      
+plink2 --bfile ./02_activities/data/gwa.qc.A1 \
+      --extract ./02_activities/data/A1_snplist.txt \
+      --hardy \
+      --out ./02_activities/data/geno.A1.hardy
+
+head ./02_activities/data/geno.A1.hardy.hardy
+awk '{print $2, $NF}' ./02_activities/data/geno.A1.hardy.hardy
 ```
 
 #### Question 4: Genetic Association Test
 
-(i) Conduct a linear regression to test the association between SNP rs1861 and the phenotype. What is the p-value?
+(i) Conduct a linear regression to test the association between SNP rs1861 and the phenotype. What is the p-value? <2e-16
 
-```         
-# Your code here...
+``` {r}        
+geno_subset <- fread("./02_activities/data/geno.A1.additive.raw")
+head(geno_subset)
+#table(geno_subset$PHENOTYPE)
+
+model <- lm(PHENOTYPE ~ rs1861_C, data = geno_subset)
+summary(model)
 ```
 
 (ii) How would you interpret the beta coefficient from this regression?
 
-```         
-# Your answer here...
-```
+For an additional C allele, the phenotype value increases by 0.97 units
 
 (iii) Plot the scatterplot of phenotype versus the genotype of SNP rs1861. Add the regression line to the plot.
 
-```         
-# Your code here...
+``` {r,message=FALSE, warning=FALSE}
+# Make prediction over continuous range (for smooth curve)
+# Create a new data frame containing a sequence of genotype values
+ geno_range <- data.frame(
+   rs1861_C = seq(0, 2, length.out = 100)
+ )
+# Use the fitted logistic regression model to predict phenotype probability
+# for each genotype value in geno_range
+ geno_range$predicted_value <- predict(model, newdata = geno_range)
+
+
+# Start building the plot
+p1=ggplot() +
+# Add points showing observed genotype-phenotype combinations
+  geom_point(
+    # Use the summarized count_data for the points
+    data = geno_subset,
+    # Map genotype to x-axis, phenotype to y-axis, and count to point size
+    aes(x = rs1861_C, y = PHENOTYPE),
+    color = "blue"
+  ) +
+  # Add a regression line showing predicted probability across genotype values
+  geom_line(# Use the prediction data frame for the line
+    data = geno_range,
+    aes(x = rs1861_C, y = predicted_value),
+    color = "red",
+    # Set line thickness
+    size = 1.2
+  ) +
+  # Control the size range of the points
+  scale_size_continuous(range = c(2, 10)) +
+  labs(
+    title = "Linear Regression: PHENOTYPE ~ Genotype",
+    x = "Genotype (0/1/2)",
+    y = "Phenotype ",
+    size = "Count"
+  ) +
+  # Restrict the visible x- and y-axis range
+  #coord_cartesian(xlim = c(-0.5, 2.5)) +
+   # Apply a minimal theme for a clean appearance
+  theme_minimal()
+
+print(p1)
+#ggsave("./02_activities/data/p1_plot.png", plot = p1, width = 7, height = 5, dpi = 300)
+
 ```
 
 (iv) Convert the genotype coding for rs1861 to recessive coding.
 
-```         
-# Your code here...
+``` {r}
+geno_subset_rec <- geno_subset
+geno_subset_rec$rs1861_C <- ifelse(geno_subset$rs1861_C == 2, 1, 0)
+table(geno_subset_rec$rs1861_C)
 ```
 
-(v) Conduct a linear regression to test the association between the recessive-coded rs1861 and the phenotype. What is the p-value?
+(v) Conduct a linear regression to test the association between the recessive-coded rs1861 and the phenotype. What is the p-value? <2e-16
 
-```         
-# Your code here...
+``` {r}         
+model_rec <- lm(PHENOTYPE ~ rs1861_C, data = geno_subset_rec)
+summary(model_rec)
 ```
 
 (vi) Plot the scatterplot of phenotype versus the recessive-coded genotype of rs1861. Add the regression line to the plot.
 
-```         
-# Your code here...
+       
+``` {r,message=FALSE, warning=FALSE}
+# Make prediction over continuous range (for smooth curve)
+# Create a new data frame containing a sequence of genotype values
+ geno_range <- data.frame(
+   rs1861_C = seq(0, 2, length.out = 100)
+ )
+# Use the fitted logistic regression model to predict phenotype probability
+# for each genotype value in geno_range
+ geno_range$predicted_value <- predict(model, newdata = geno_range)
+
+
+# Start building the plot
+p2=ggplot() +
+# Add points showing observed genotype-phenotype combinations
+  geom_point(
+    # Use the summarized count_data for the points
+    data = geno_subset_rec,
+    # Map genotype to x-axis, phenotype to y-axis, and count to point size
+    aes(x = rs1861_C, y = PHENOTYPE),
+    color = "blue"
+  ) +
+  # Add a regression line showing predicted probability across genotype values
+  geom_line(# Use the prediction data frame for the line
+    data = geno_range,
+    aes(x = rs1861_C, y = predicted_value),
+    color = "red",
+    # Set line thickness
+    size = 1.2
+  ) +
+  # Control the size range of the points
+  scale_size_continuous(range = c(2, 10)) +
+  labs(
+    title = "Linear Regression: PHENOTYPE ~ Genotype",
+    x = "Genotype (0/1/2)",
+    y = "Phenotype ",
+    size = "Count"
+  ) +
+  # Restrict the visible x- and y-axis range
+  #coord_cartesian(xlim = c(-0.5, 2.5)) +
+   # Apply a minimal theme for a clean appearance
+  theme_minimal()
+
+print(p2)
+#ggsave("./02_activities/data/p1_plot.png", plot = p1, width = 7, height = 5, dpi = 300)
+
 ```
 
 (vii) Which model fits better? Justify your answer.
+The additive coding model fits better, its AIC is lower compared to the recessive model
+``` {r}
+AIC(model_rec)
+AIC(model)
 
-```         
-# Your answer here...
 ```
 
 ### Criteria
