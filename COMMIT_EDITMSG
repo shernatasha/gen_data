@@ -1,0 +1,28 @@
+A1 edit done Mar 19
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# On branch assignment
+# Your branch is up to date with 'origin/assignment'.
+#
+# Changes to be committed:
+#	new file:   ../../.Rhistory
+#	modified:   assignment_1.html
+#	modified:   assignment_1.qmd
+#	new file:   assignment_1_files/figure-html/unnamed-chunk-11-1.png
+#	new file:   assignment_1_files/figure-html/unnamed-chunk-14-1.png
+#	new file:   assignment_1_files/libs/bootstrap/bootstrap-138a6193a3bd40baf1e627da441a4734.min.css
+#	new file:   assignment_1_files/libs/bootstrap/bootstrap-icons.css
+#	new file:   assignment_1_files/libs/bootstrap/bootstrap-icons.woff
+#	new file:   assignment_1_files/libs/bootstrap/bootstrap.min.js
+#	new file:   assignment_1_files/libs/clipboard/clipboard.min.js
+#	new file:   assignment_1_files/libs/quarto-html/anchor.min.js
+#	new file:   assignment_1_files/libs/quarto-html/popper.min.js
+#	new file:   assignment_1_files/libs/quarto-html/quarto-syntax-highlighting-46f66b053e56abd73bb6e954d61a315b.css
+#	new file:   assignment_1_files/libs/quarto-html/quarto.js
+#	new file:   assignment_1_files/libs/quarto-html/tabsets/tabsets.js
+#	new file:   assignment_1_files/libs/quarto-html/tippy.css
+#	new file:   assignment_1_files/libs/quarto-html/tippy.umd.min.js
+#	modified:   ../tutorials/tutorial_1.qmd
+#	modified:   ../../SETUP.md
+#
